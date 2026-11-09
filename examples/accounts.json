@@ -1,0 +1,4 @@
+[
+  {"label": "Work account (default Claude Code login)", "badge": "W", "configDir": null},
+  {"label": "Second account", "badge": "S", "configDir": "~/.claude-second"}
+]
