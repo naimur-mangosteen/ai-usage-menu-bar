@@ -57,6 +57,18 @@ Check which account a slot is signed in to with `claude auth status` (add `CLAUD
 
 ## Privacy and how it works
 
+```mermaid
+flowchart LR
+  subgraph mac[Your Mac]
+    CU[Claude Usage] -- reads token via /usr/bin/security --> KC[(Keychain:<br/>Claude Code-credentials)]
+    CU -. near expiry: init-only renew .-> CC[Claude Code CLI]
+    CC -- writes refreshed token --> KC
+    XU[Codex Usage] -- rateLimits/read --> CX[Codex CLI<br/>app-server]
+  end
+  CU -- every 5 min --> API[(api.anthropic.com<br/>/api/oauth/usage)]
+  CX --> OAI[(ChatGPT / Codex)]
+```
+
 - **Claude:** reads Claude Code's own Keychain item (`Claude Code-credentials`, or `Claude Code-credentials-<hash>` for another config directory) through `/usr/bin/security`. This is the same tool Claude Code uses to write the item, so macOS does not ask for your Keychain password. The token stays in memory and is only sent to `api.anthropic.com/api/oauth/usage`. When the token is about to expire, the app asks Claude Code to renew it by starting it in initialization-only mode, which sends no prompt and uses no tokens.
 - **Codex:** asks the Codex CLI for its rate limits (`codex app-server`). The app never sees Codex credentials.
 - Nothing is logged, written to disk, or sent anywhere else. Both apps use undocumented endpoints, so a CLI update could break them. If that happens, the item shows `!` and the menu explains why.
