@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "AI Usage Menu Bar — how it works",
+    "output": ".archify/architecture-usage-menu-bar-20261110-030500/usage-menu-bar.html",
+    "quality_profile": "showcase",
+    "locale": "en"
+  },
+  "components": [
+    { "id": "you", "type": "external", "label": "You", "sublabel": "glance at the menu bar", "pos": [40, 305], "size": [130, 60] },
+    { "id": "keychain", "type": "security", "label": "macOS Keychain", "sublabel": "Claude Code-credentials", "pos": [290, 40], "size": [150, 64] },
+    { "id": "claudecode", "type": "backend", "label": "Claude Code CLI", "sublabel": "owns token refresh", "pos": [600, 40], "size": [140, 64] },
+    { "id": "claudeapp", "type": "frontend", "label": "Claude Usage", "sublabel": "menu-bar app", "pos": [290, 190], "size": [150, 64], "tag": "up to 4 accounts" },
+    { "id": "anthropic", "type": "cloud", "label": "Anthropic usage API", "sublabel": "api.anthropic.com", "pos": [900, 190], "size": [160, 64] },
+    { "id": "codexapp", "type": "frontend", "label": "Codex Usage", "sublabel": "menu-bar app", "pos": [290, 420], "size": [150, 64] },
+    { "id": "codexcli", "type": "backend", "label": "Codex CLI", "sublabel": "app-server", "pos": [600, 420], "size": [140, 64] },
+    { "id": "openai", "type": "cloud", "label": "ChatGPT account", "sublabel": "Codex rate limits", "pos": [900, 420], "size": [160, 64] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Your Mac", "wraps": ["keychain", "claudecode", "claudeapp", "codexapp", "codexcli"] }
+  ],
+  "connections": [
+    { "id": "you-claude", "from": "you", "to": "claudeapp", "label": "5h / weekly %" },
+    { "id": "you-codex", "from": "you", "to": "codexapp", "label": "CX item" },
+    { "id": "read-token", "from": "claudeapp", "to": "keychain", "label": "read token", "variant": "security" },
+    { "id": "usage-call", "from": "claudeapp", "to": "anthropic", "label": "GET /api/oauth/usage · 5 min", "variant": "emphasis" },
+    { "id": "renew", "from": "claudeapp", "to": "claudecode", "label": "renew if expiring", "variant": "dashed", "fromSide": "right", "toSide": "bottom" },
+    { "id": "save-token", "from": "claudecode", "to": "keychain", "label": "saves new token", "variant": "security" },
+    { "id": "rate-limits", "from": "codexapp", "to": "codexcli", "label": "rateLimits/read", "variant": "emphasis" },
+    { "id": "codex-remote", "from": "codexcli", "to": "openai", "label": "signed-in user" }
+  ],
+  "cards": [
+    { "dot": "rose", "title": "Privacy", "items": ["Token read via /usr/bin/security, so no Keychain prompts", "Token kept in memory only; nothing logged", "Codex credentials never leave the Codex CLI"] },
+    { "dot": "emerald", "title": "Refresh", "items": ["Usage polled every 5 minutes, countdown every 15 s", "Renewal starts Claude Code in init-only mode: no prompt, no tokens used"] },
+    { "dot": "cyan", "title": "Accounts", "items": ["Each CLAUDE_CONFIG_DIR login gets its own menu-bar item", "Configured in accounts.json"] }
+  ]
+}
