@@ -57,10 +57,7 @@ Check which account a slot is signed in to with `claude auth status` (add `CLAUD
 
 ## Privacy and how it works
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/architecture-dark.png">
-  <img src="docs/architecture-light.png" alt="Architecture: you read the Claude Usage and Codex Usage menu-bar items. On your Mac, Claude Usage reads its token from the macOS Keychain, asks Claude Code to renew it when expiring (Claude Code saves the new token to the Keychain), and calls the Anthropic usage API every 5 minutes. Codex Usage asks the Codex CLI for rate limits, which comes from your ChatGPT account.">
-</picture>
+<img src="docs/architecture.png" alt="Architecture: you read the Claude Usage and Codex Usage menu-bar items. On your Mac, Claude Usage reads its token from the macOS Keychain, asks Claude Code to renew it when expiring (Claude Code saves the new token to the Keychain), and calls the Anthropic usage API every 5 minutes. Codex Usage asks the Codex CLI for rate limits, which comes from your ChatGPT account.">
 
 <sub>Made with <a href="https://github.com/tt-a1i/archify">Archify</a>. Source: <code>docs/architecture.archify.json</code>; download <code>docs/architecture.html</code> for the interactive version.</sub>
 
