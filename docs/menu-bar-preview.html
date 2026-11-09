@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box;margin:0;white-space:nowrap}
+body{width:900px;height:300px;background:linear-gradient(160deg,#2b3a55,#4a3f6b 55%,#7a5a7e);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;color:#fff;position:relative;overflow:hidden}
+.bar{height:30px;background:rgba(20,20,24,.55);backdrop-filter:blur(20px);display:flex;align-items:center;padding:0 14px;font-size:13.5px}
+.l{display:flex;gap:20px;align-items:center}.l b{font-weight:700}
+.r{margin-left:auto;display:flex;gap:12px;align-items:center}
+.u{font-family:system-ui,-apple-system,sans-serif;font-weight:400;font-size:13px;font-variant-numeric:tabular-nums;font-size:12px;padding:2px 7px;border-radius:5px}
+.u.on{background:rgba(255,255,255,.22)}
+.dim{opacity:.9}
+.menu{position:absolute;top:33px;left:412px;width:430px;background:rgba(40,40,46,.92);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:5px;font-size:13px;box-shadow:0 12px 40px rgba(0,0,0,.45)}
+.menu div{padding:3.5px 10px;border-radius:5px}
+.menu .g{color:rgba(255,255,255,.55)}
+.menu hr{border:0;border-top:1px solid rgba(255,255,255,.12);margin:5px 10px}
+.menu .h{background:#2f6fe4}
+svg{display:block}
+</style></head><body>
+<div class="bar">
+ <div class="l"><svg width="14" height="16" viewBox="0 0 14 16"><path fill="#fff" d="M11.6 8.5c0-2 1.6-2.9 1.7-3-1-1.4-2.4-1.6-2.9-1.6-1.2-.1-2.4.7-3 .7s-1.6-.7-2.6-.7C3.4 4 2.1 4.8 1.4 6c-1.5 2.6-.4 6.4 1 8.5.7 1 1.5 2.2 2.6 2.1 1 0 1.4-.7 2.7-.7s1.6.7 2.7.6c1.1 0 1.8-1 2.5-2 .8-1.2 1.1-2.3 1.1-2.4 0 0-2.3-.9-2.4-3.6zM9.6 2.5c.6-.7 1-1.6.9-2.5-.8 0-1.8.5-2.4 1.2-.5.6-1 1.6-.9 2.5.9.1 1.8-.5 2.4-1.2z"/></svg><b>Finder</b><span>File</span><span>Edit</span><span>View</span><span>Help</span></div>
+ <div class="r">
+  <span class="u on" id="w">W 21/74·16h</span><span class="u">S 13/44·5d</span><span class="u">CX —/45·39h</span>
+  <svg width="17" height="13" viewBox="0 0 17 13"><path fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" d="M1.5 4.5a10 10 0 0 1 14 0M4 7.2a6.3 6.3 0 0 1 9 0"/><circle cx="8.5" cy="10.5" r="1.4" fill="#fff"/></svg>
+  <svg width="24" height="12" viewBox="0 0 24 12"><rect x=".7" y=".7" width="20" height="10.6" rx="3" fill="none" stroke="#fff" stroke-opacity=".6"/><rect x="2.3" y="2.3" width="13" height="7.4" rx="1.6" fill="#fff"/><rect x="21.8" y="4" width="1.6" height="4" rx=".8" fill="#fff" fill-opacity=".6"/></svg>
+  <span class="dim">Tue Nov 10&nbsp; 10:41 AM</span>
+ </div>
+</div>
+<div class="menu">
+ <div>Claude usage • Work account</div>
+ <div>5-hour: 21%&nbsp;&nbsp; Weekly: 74%</div>
+ <div class="g">Bar: 5-hour % / weekly % · time to weekly reset · * stale · ! issue</div>
+ <div>Updated: 11/10/26, 10:41 AM</div>
+ <div>5h resets in 2h 14m — 11/10/26, 12:55 PM</div>
+ <div>Week resets in 16h 41m — 11/11/26, 3:22 AM</div>
+ <hr><div class="h">Refresh</div><div>Next check: 11/10/26, 10:46 AM</div><div>Open Claude Usage Settings</div>
+ <hr><div>Quit Claude Usage</div>
+</div>
+<script>const r=document.getElementById("w").getBoundingClientRect();document.querySelector(".menu").style.left=(r.left-2)+"px"</script></body></html>

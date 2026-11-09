@@ -2,9 +2,9 @@
 
 Two small macOS menu-bar apps that show how much of your Claude and Codex plan limits you have used, so you can pace your work and use the full allowance before it resets.
 
-```
-W 21/74·16h      CX —/45·39h
-```
+<p align="center"><img src="docs/menu-bar.png" width="900" alt="macOS menu bar showing W 21/74·16h, S 13/44·5d and CX —/45·39h, with the W item's menu open listing 5-hour 21%, weekly 74% and both reset times"></p>
+
+<sub>Preview with sample numbers (two Claude accounts, W and S, plus Codex). Regenerate it from <code>docs/menu-bar-preview.html</code>.</sub>
 
 Each item reads **badge, 5-hour % used / weekly % used, time until the weekly reset**. The countdown shows its largest unit: days when 2 or more days remain, then hours, then minutes. `—` means that window is unavailable. A trailing `*` means the number is stale, and `!` means there is a problem. Click an item for the exact percentages, both reset times, and a Refresh button.
 
