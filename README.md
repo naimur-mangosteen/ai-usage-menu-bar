@@ -1,6 +1,6 @@
 # AI Usage Menu Bar
 
-Two small macOS menu-bar apps that show how much of your Claude and Codex plan limits you have used, so you can pace your work and use the full allowance before it resets.
+Small macOS menu-bar apps that show how much of your Claude, Codex, Cursor and Antigravity plan limits you have used, so you can pace your work and use the full allowance before it resets.
 
 <p align="center"><img src="docs/menu-bar.png" width="900" alt="macOS menu bar showing W 21/74·16h, S 13/44·5d and CX —/45·39h, with the W item's menu open listing 5-hour 21%, weekly 74% and both reset times"></p>
 
@@ -10,14 +10,18 @@ Each item reads **badge, 5-hour % used / weekly % used, time until the weekly re
 
 - **Claude Usage** follows your **Claude Code** login. It can show up to four accounts, each as its own item.
 - **Codex Usage** (`CX`) follows your **Codex CLI** login (ChatGPT account).
+- **Cursor Usage** (`CU`) follows the **Cursor** app's login. Cursor has a monthly billing cycle instead of 5-hour and weekly windows, so it reads **plan % used · time until the cycle resets**, for example `CU 34%·12d`, and the menu adds a month pace line.
+- **Antigravity Usage** (`AG`) follows your **Antigravity CLI** (`agy`) login. Antigravity splits quota into groups (Gemini models; Claude and GPT models). The bar shows the most-used group for each window, and the menu lists every group.
 
-Both apps refresh every 5 minutes, run without a Dock icon, and start at login.
+The apps refresh every 5 minutes, run without a Dock icon, and start at login.
 
 ## Requirements
 
 - macOS 13 or later, with the Xcode Command Line Tools (`xcode-select --install`).
 - For Claude: Claude Code installed and signed in (`claude auth login`).
 - For Codex (optional): Codex CLI installed and signed in (`codex login`).
+- For Cursor (optional): the Cursor app installed and signed in.
+- For Antigravity (optional): Antigravity CLI `agy` 1.3.1 or later, signed in. Older versions are refused because their `/usage` was reported to spend quota.
 
 ## Install
 
@@ -28,8 +32,9 @@ To install by hand:
 ```bash
 git clone https://github.com/naimur-mangosteen/ai-usage-menu-bar.git
 cd ai-usage-menu-bar
-./install.sh            # both apps
-./install.sh claude     # only Claude Usage
+./install.sh                     # Claude Usage and Codex Usage
+./install.sh claude              # only Claude Usage
+./install.sh cursor antigravity  # add Cursor Usage and Antigravity Usage
 ```
 
 This builds the apps, runs their self-tests, copies them to `~/Applications`, starts them, and turns on Open at Login. If an item is hidden behind the notch, Command-drag menu-bar icons to make room. To update, `git pull` and run `./install.sh` again. To remove, run `./uninstall.sh`.
@@ -63,7 +68,9 @@ Check which account a slot is signed in to with `claude auth status` (add `CLAUD
 
 - **Claude:** reads Claude Code's own Keychain item (`Claude Code-credentials`, or `Claude Code-credentials-<hash>` for another config directory) through `/usr/bin/security`. This is the same tool Claude Code uses to write the item, so macOS does not ask for your Keychain password. The token stays in memory and is only sent to `api.anthropic.com/api/oauth/usage`. When the token is about to expire, the app asks Claude Code to renew it by starting it in initialization-only mode, which sends no prompt and uses no tokens.
 - **Codex:** asks the Codex CLI for its rate limits (`codex app-server`). The app never sees Codex credentials.
-- Nothing is logged, written to disk, or sent anywhere else. Both apps use undocumented endpoints, so a CLI update could break them. If that happens, the item shows `!` and the menu explains why.
+- **Cursor:** reads the access token the Cursor app keeps in its own state database (`~/Library/Application Support/Cursor/User/globalStorage/state.vscdb`), opened read-only, and sends it only to `cursor.com/api/usage-summary`, the endpoint Cursor's usage dashboard uses. It shows percentages only. It never renews the login: when the token expires, the menu asks you to open Cursor, which renews it.
+- **Antigravity:** asks the CLI with `agy -p /usage --output-format json`, in an empty temporary folder. The app never sees Antigravity credentials. If agy ever reports that this check ran a model turn, the app stops checking until you choose Check Again, so it cannot spend the quota it reports.
+- Nothing is logged, written to disk, or sent anywhere else. All the apps use undocumented endpoints or CLI output, so a CLI update could break them. If that happens, the item shows `!` and the menu explains why.
 
 ## Troubleshooting
 
@@ -72,4 +79,6 @@ Check which account a slot is signed in to with `claude auth status` (add `CLAUD
 | `—/—!` with "sign in" in the menu | Run `claude auth login` (or `codex login`), then click Refresh. |
 | Both Claude items show the same numbers | Both slots are signed in to the same account. Sign the second slot out and back in with the other account. |
 | `CX` keeps failing | Check that `codex` works in Terminal. The app looks for it in `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin`. |
+| `CU` says the login expired or was not accepted | Open Cursor (sign in again if asked), then click Refresh. |
+| `AG` keeps failing | Check that `agy -p /usage` works in Terminal and `agy --version` is 1.3.1 or later (`agy update`). The app looks for it in `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin`. |
 | An item is missing from the menu bar | It is hidden behind the notch or by a menu-bar manager. Quit other menu-bar apps or Command-drag to rearrange. |

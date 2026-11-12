@@ -1,10 +1,10 @@
 #!/bin/zsh
 # Builds the menu-bar apps into ./build and runs their self-tests.
-# Usage: ./build.sh [claude] [codex]      (default: both)
+# Usage: ./build.sh [claude] [codex] [cursor] [antigravity]   (default: all)
 # Signing: ad-hoc by default. Set SIGN_IDENTITY to a codesigning identity (name or SHA-1) to use your own.
 set -eu
 cd -- "${0:A:h}"
-targets=("$@"); (( $# )) || targets=(claude codex)
+targets=("$@"); (( $# )) || targets=(claude codex cursor antigravity)
 identity="${SIGN_IDENTITY:--}"
 mkdir -p build .module-cache
 
@@ -41,6 +41,8 @@ for t in $targets; do
   case $t in
     claude) build_app claude-usage 'Claude Usage' ClaudeUsage local.claude.usage.companion renew_login.py ;;
     codex)  build_app codex-usage  'Codex Usage'  CodexUsage  local.codex.usage.companion  read_usage.py ;;
-    *) print -u2 "Unknown target: $t (use claude and/or codex)"; exit 1 ;;
+    cursor) build_app cursor-usage 'Cursor Usage' CursorUsage local.cursor.usage.companion read_usage.py ;;
+    antigravity) build_app antigravity-usage 'Antigravity Usage' AntigravityUsage local.antigravity.usage.companion read_usage.py ;;
+    *) print -u2 "Unknown target: $t (use claude, codex, cursor and/or antigravity)"; exit 1 ;;
   esac
 done
