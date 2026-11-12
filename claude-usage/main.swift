@@ -97,14 +97,17 @@ enum Pace {
 /// the reset time identifies the window, so a new window can alert again.
 enum Alerts {
     static let thresholds: [Double] = [80, 95]
+    /// Windows are at least 5 hours long, so reset times this close together are the same window.
+    static let sameWindowTolerance: TimeInterval = 600
     /// The threshold to announce now, or nil. Records it in `defaults` so it is not repeated, even after a restart.
     static func due(_ window: WindowUsage?, key: String, defaults: UserDefaults) -> Double? {
         guard let window, let reset = ResetTime.date(window.resets_at),
               let threshold = thresholds.last(where: { window.utilization >= $0 }) else { return nil }
-        let resetMinute = Int(reset.timeIntervalSince1970 / 60)   // ignore sub-minute jitter in resets_at
+        let resetSeconds = reset.timeIntervalSince1970
         let stored = defaults.string(forKey: key)?.split(separator: ":").compactMap { Double($0) } ?? []
-        if stored.count == 2, Int(stored[0]) == resetMinute, stored[1] >= threshold { return nil }
-        defaults.set("\(resetMinute):\(threshold)", forKey: key)
+        // Same window when the reset time is within tolerance: resets_at can jitter across a minute boundary.
+        if stored.count == 2, abs(stored[0] - resetSeconds) < sameWindowTolerance, stored[1] >= threshold { return nil }
+        defaults.set("\(Int(resetSeconds)):\(threshold)", forKey: key)
         return threshold
     }
     static func post(title: String, body: String) {
@@ -250,7 +253,8 @@ final class AccountMeter: NSObject, NSMenuDelegate {
     }
     @objc func refresh() {
         guard !busy, Date() >= nextCheck else { render(); return }
-        busy = true; lastAttempt = Date(); render()
+        // Clear lastCode so an old 429 can't keep Refresh disabled after a later network error.
+        busy = true; lastAttempt = Date(); lastCode = nil; render()
         let service = account.keychainService, configDir = account.expandedConfigDir
         Task {
             do {
@@ -332,7 +336,7 @@ final class AccountMeter: NSObject, NSMenuDelegate {
     }
     func announceThresholds() {
         for (key, label, window) in [("5h", "5-hour", usage?.five_hour), ("week", "Weekly", usage?.seven_day)] {
-            guard let threshold = Alerts.due(window, key: "alert.\(index).\(key)", defaults: .standard) else { continue }
+            guard let threshold = Alerts.due(window, key: "alert.\(account.keychainService).\(key)", defaults: .standard) else { continue }
             let reset = ResetTime.remaining(window?.resets_at).map { " Resets in \($0)." } ?? ""
             Alerts.post(title: "Claude \(label) limit at \(Int(threshold))%",
                         body: "\(account.label): \(Usage.percent(window)) used.\(reset)")
@@ -358,11 +362,14 @@ final class AccountMeter: NSObject, NSMenuDelegate {
         let paces = [Pace.line("5h", usage?.five_hour, length: Pace.fiveHour), Pace.line("Week", usage?.seven_day, length: Pace.week)].compactMap { $0 }
         if !paces.isEmpty { menu.addItem(.separator()); paces.forEach { menu.addItem(line($0)) } }
         menu.addItem(.separator())
-        let refreshItem = line(busy ? "Refreshing…" : "Refresh", action:#selector(forceRefresh))
-        refreshItem.isEnabled = Self.canForceRefresh(busy: busy, lastAttempt: lastAttempt, rateLimitedUntil: rateLimitedUntil)
-        menu.addItem(refreshItem)
+        // While Keychain access is denied, Retry Keychain Access does the same job as Refresh, so show only that.
         if nextCheck == .distantFuture { menu.addItem(line("Retry Keychain Access",action:#selector(retryKeychain))) }
-        else if nextCheck > Date() { menu.addItem(line("Next check: \(fmt.string(from:nextCheck))")) }
+        else {
+            let refreshItem = line(busy ? "Refreshing…" : "Refresh", action:#selector(forceRefresh))
+            refreshItem.isEnabled = Self.canForceRefresh(busy: busy, lastAttempt: lastAttempt, rateLimitedUntil: rateLimitedUntil)
+            menu.addItem(refreshItem)
+            if nextCheck > Date() { menu.addItem(line("Next check: \(fmt.string(from:nextCheck))")) }
+        }
         menu.addItem(line("Open Claude Usage Settings",action:#selector(openUsage)))
         menu.addItem(.separator()); menu.addItem(line("Quit Claude Usage",action:#selector(quit)))
     }
@@ -372,9 +379,13 @@ final class AccountMeter: NSObject, NSMenuDelegate {
         let prefix = account.badge.map { $0.isEmpty ? "" : "\($0) " } ?? ""
         let title = prefix + (usage?.compact ?? "—/—") + countdown + (stale ? "*" : (issue != nil && !busy ? "!" : ""))
         let level = Level.of(usage)
-        var attributes: [NSAttributedString.Key: Any] = [.font: Self.titleFont]
-        if let color = level.color { attributes[.foregroundColor] = color }
-        item.button?.attributedTitle = NSAttributedString(string: title, attributes: attributes)
+        // Plain title when normal so the system picks the menu-bar text color (an attributed title
+        // without a color draws black, which is unreadable on a dark menu bar).
+        if let color = level.color {
+            item.button?.attributedTitle = NSAttributedString(string: title, attributes: [.font: Self.titleFont, .foregroundColor: color])
+        } else {
+            item.button?.title = title
+        }
         let levelWord = level == .critical ? ", near limit" : level == .warn ? ", above 80%" : ""
         item.button?.setAccessibilityLabel("Claude usage, \(account.label): \(title)\(levelWord)")
         item.button?.toolTip = (issue.map { $0 + "\n" } ?? "")
@@ -401,17 +412,23 @@ final class Meter: NSObject, NSApplicationDelegate {
         timer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refreshAll() }
         }
-        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(wake), name: NSWorkspace.didWakeNotification, object: nil)
+        let center = NSWorkspace.shared.notificationCenter
+        center.addObserver(self, selector: #selector(willSleep), name: NSWorkspace.willSleepNotification, object: nil)
+        center.addObserver(self, selector: #selector(wake), name: NSWorkspace.didWakeNotification, object: nil)
         refreshAll()
     }
-    /// Wait for the network after wake: refreshing at once usually failed, showed "!" and started a 5-minute backoff.
-    @objc func wake() {
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 10_000_000_000)
-            self?.refreshAll()
-        }
+    /// Scheduled refreshes pause from sleep until `wakeDelay` after wake. Refreshing at once usually failed
+    /// before the network was back, showed "!" and started a 5-minute backoff. Holding from sleep matters
+    /// because the repeating timer fires as soon as the Mac wakes, possibly before didWake is delivered.
+    nonisolated static let wakeDelay: TimeInterval = 10
+    var holdUntil: Date?
+    @objc func willSleep() { holdUntil = .distantFuture }
+    @objc func wake() { holdUntil = Date().addingTimeInterval(Self.wakeDelay) }   // the 15 s timer picks it up
+    nonisolated static func isHeld(_ holdUntil: Date?, now: Date = Date()) -> Bool { holdUntil.map { now < $0 } ?? false }
+    func refreshAll() {
+        guard !Self.isHeld(holdUntil) else { return }
+        meters.forEach { $0.refresh() }
     }
-    func refreshAll() { meters.forEach { $0.refresh() } }
 }
 
 if CommandLine.arguments.contains("--enable-login") {
@@ -471,13 +488,19 @@ if CommandLine.arguments.contains("--enable-login") {
     check(Alerts.due(WindowUsage(utilization:85, resets_at:weekReset), key:"k", defaults:defaults) == nil)
     check(Alerts.due(WindowUsage(utilization:96, resets_at:weekReset), key:"k", defaults:defaults) == 95)
     check(Alerts.due(WindowUsage(utilization:99, resets_at:weekReset), key:"k", defaults:defaults) == nil)
+    // resets_at jitter across a minute boundary is still the same window.
+    check(Alerts.due(WindowUsage(utilization:99, resets_at:String(1_000_000 + 6*86400 - 30)), key:"k", defaults:defaults) == nil)
+    check(Alerts.due(WindowUsage(utilization:99, resets_at:String(1_000_000 + 6*86400 + 45)), key:"k", defaults:defaults) == nil)
     check(Alerts.due(WindowUsage(utilization:81, resets_at:String(1_000_000 + 13*86400)), key:"k", defaults:defaults) == 80)
     // accounts.json: missing is silent, broken or too long warns.
     check(Account.parse(nil).warning == nil && Account.parse(nil).accounts.count == 1)
     check(Account.parse(Data("{oops".utf8)).warning != nil && Account.parse(Data("[]".utf8)).warning != nil)
     let five = Data(#"[{"label":"a"},{"label":"b"},{"label":"c"},{"label":"d"},{"label":"e"}]"#.utf8)
     check(Account.parse(five).accounts.count == 4 && Account.parse(five).warning != nil)
-    print("Usage parsing, reset countdown, account naming, refresh, pace and alert checks passed")
+    // Sleep/wake: held while asleep and for the wake delay, released after.
+    check(!Meter.isHeld(nil, now:now) && Meter.isHeld(.distantFuture, now:now))
+    check(Meter.isHeld(now.addingTimeInterval(Meter.wakeDelay), now:now) && !Meter.isHeld(now.addingTimeInterval(-1), now:now))
+    print("Usage parsing, reset countdown, account naming, refresh, pace, alert and wake checks passed")
 } else {
     MainActor.assumeIsolated {
     let id = Bundle.main.bundleIdentifier ?? "local.claude.usage.companion"
