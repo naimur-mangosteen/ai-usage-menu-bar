@@ -13,6 +13,13 @@ Each item reads **badge, 5-hour % used / weekly % used, time until the weekly re
 
 Both apps refresh every 5 minutes, run without a Dock icon, and start at login.
 
+Claude Usage also helps you pace yourself:
+
+- **Colors:** the item turns orange when either window passes 80%, and red at 95%.
+- **Pace:** the menu compares each window's usage with how much of it has elapsed, for example `Week pace: 4% used, 18% elapsed — 14 pts under pace`. Within 5 points counts as on pace.
+- **Alerts:** a macOS notification fires once when a window crosses 80% and again at 95%. The first alert asks for notification permission.
+- **Refresh:** fetches right away. It is limited to once every 30 seconds and stays off while the usage API is rate limiting.
+
 ## Requirements
 
 - macOS 13 or later, with the Xcode Command Line Tools (`xcode-select --install`).

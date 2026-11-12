@@ -28,7 +28,7 @@ build_app() { # dir name exe bundle-id helper
   local app="build/$2.app"
   rm -rf "$app"; mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
   xcrun swiftc -swift-version 5 -O -module-cache-path "$PWD/.module-cache" \
-    -framework AppKit -framework Security "$1/main.swift" -o "$app/Contents/MacOS/$3"
+    -framework AppKit -framework Security -framework UserNotifications "$1/main.swift" -o "$app/Contents/MacOS/$3"
   plist "$2" "$3" "$4" > "$app/Contents/Info.plist"
   cp "$1/$5" "$app/Contents/Resources/"
   codesign --force --sign "$identity" "$app"
