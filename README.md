@@ -8,6 +8,13 @@ Two small macOS menu-bar apps that show how much of your Claude and Codex plan l
 
 Each item reads **badge, 5-hour % used / weekly % used, time until the weekly reset**. The countdown shows its largest unit: days when 2 or more days remain, then hours, then minutes. `—` means that window is unavailable. A trailing `*` means the number is stale, and `!` means there is a problem. Click an item for the exact percentages, both reset times, and a Refresh button.
 
+Claude Usage also helps you pace yourself:
+
+- **Colors:** the item turns orange when either window passes 80%, and red at 95%.
+- **Pace:** the menu compares each window's usage with how much of it has elapsed, for example `Week pace: 4% used, 18% elapsed — 14 pts under pace`. Within 5 points counts as on pace.
+- **Alerts:** a macOS notification fires once when a window crosses 80% and again at 95%. The first alert asks for notification permission.
+- **Refresh:** fetches right away. It is limited to once every 30 seconds and stays off while the usage API is rate limiting.
+
 - **Claude Usage** follows your **Claude Code** login. It can show up to four accounts, each as its own item.
 - **Codex Usage** (`CX`) follows your **Codex CLI** login (ChatGPT account).
 
