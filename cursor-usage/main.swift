@@ -68,6 +68,8 @@ struct CursorReader {
         process.arguments = ["-I", script]; process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
         let pipe = Pipe(); process.standardOutput = pipe; process.standardError = FileHandle.nullDevice
         try process.run()
+        // Watchdog: the helper gives itself 45 s overall; never let a stuck read keep the app on "Refreshing…".
+        DispatchQueue.global().asyncAfter(deadline: .now() + 60) { if process.isRunning { process.terminate() } }
         let data = pipe.fileHandleForReading.readDataToEndOfFile(); process.waitUntilExit()
         if process.terminationStatus != 0 {
             let object = try? JSONSerialization.jsonObject(with:data) as? [String:Any]

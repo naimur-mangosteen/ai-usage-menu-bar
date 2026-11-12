@@ -73,6 +73,8 @@ struct AntigravityReader {
         process.arguments = ["-I", script]; process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
         let pipe = Pipe(); process.standardOutput = pipe; process.standardError = FileHandle.nullDevice
         try process.run()
+        // Watchdog: the helper allows agy 80 s at most; past that, stop it (it kills agy's process group on SIGTERM).
+        DispatchQueue.global().asyncAfter(deadline: .now() + 120) { if process.isRunning { process.terminate() } }
         let data = pipe.fileHandleForReading.readDataToEndOfFile(); process.waitUntilExit()
         if process.terminationStatus != 0 {
             let object = try? JSONSerialization.jsonObject(with:data) as? [String:Any]
@@ -95,10 +97,13 @@ final class Meter: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var nextCheck = Date.distantPast
     var issue: String? = "Loading usage…"
     var busy = false
-    var halted = false
+    /// Saved, so a halt survives Quit, reinstall and login: relaunching must not spend another turn.
+    nonisolated static let haltKey = "haltReason"
+    var halted: Bool { UserDefaults.standard.string(forKey: Self.haltKey) != nil }
     var failures = 0
     var holdUntil: Date?
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if let reason = UserDefaults.standard.string(forKey: Self.haltKey) { issue = reason; nextCheck = .distantFuture }
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
         let menu = NSMenu(); menu.delegate = self; menu.autoenablesItems = false; item.menu = menu
@@ -123,7 +128,7 @@ final class Meter: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 usage = try await Task.detached { try AntigravityReader.read() }.value
                 lastSuccess = Date(); issue = nil; failures = 0; nextCheck = Date().addingTimeInterval(300)
             } catch MeterError.halt(let message) {
-                halted = true; issue = message; nextCheck = .distantFuture
+                UserDefaults.standard.set(message, forKey: Self.haltKey); issue = message; nextCheck = .distantFuture
             } catch MeterError.service(let message) {
                 usage = nil; lastSuccess = nil; issue = message; failures += 1
                 nextCheck = Date().addingTimeInterval(backoff())
@@ -145,7 +150,7 @@ final class Meter: NSObject, NSApplicationDelegate, NSMenuDelegate {
         nextCheck = .distantPast; refresh()
     }
     /// Deliberate retry after a halt, e.g. once agy has been updated.
-    @objc func checkAgain() { halted = false; nextCheck = .distantPast; refresh() }
+    @objc func checkAgain() { UserDefaults.standard.removeObject(forKey: Self.haltKey); nextCheck = .distantPast; refresh() }
     func line(_ title: String, action: Selector? = nil) -> NSMenuItem {
         let row = NSMenuItem(title:title, action:action, keyEquivalent:""); row.target = self; return row
     }

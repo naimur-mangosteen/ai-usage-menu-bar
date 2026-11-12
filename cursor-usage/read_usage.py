@@ -6,7 +6,7 @@ cursor.com, and never printed, logged or written anywhere. The app never renews 
 when it expires, the menu asks you to open Cursor, which renews it itself.
 Prints {"plan","on_demand","resets_at","cycle_start","membership","unlimited"} or {"error"}.
 """
-import base64, json, os, sqlite3, sys, time, urllib.error, urllib.parse, urllib.request
+import base64, json, os, signal, sqlite3, sys, time, urllib.error, urllib.parse, urllib.request
 
 DB = os.path.expanduser('~/Library/Application Support/Cursor/User/globalStorage/state.vscdb')
 URL = 'https://cursor.com/api/usage-summary'   # undocumented: the endpoint Cursor's own usage dashboard calls
@@ -107,6 +107,9 @@ def self_test():
 if __name__ == '__main__':
     if '--self-test' in sys.argv:
         self_test(); print('ok'); sys.exit(0)
+    # Overall deadline: urlopen's timeout is per socket read, so a trickling response could run on.
+    def expire(signum, frame): raise RuntimeError('Cursor usage check timed out — retrying automatically.')
+    signal.signal(signal.SIGALRM, expire); signal.alarm(45)
     try: print(json.dumps(fetch()))
     except RuntimeError as e: print(json.dumps({'error': str(e)})); sys.exit(1)
     except Exception: print(json.dumps({'error': 'Could not read Cursor usage.'})); sys.exit(1)
