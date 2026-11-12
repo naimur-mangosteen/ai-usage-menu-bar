@@ -3,7 +3,7 @@
   "diagram_type": "architecture",
   "meta": {
     "title": "AI Usage Menu Bar \u2014 how it works",
-    "output": ".archify/architecture-usage-menu-bar-20261110-031500/usage-menu-bar.html",
+    "output": "docs/architecture.html",
     "quality_profile": "showcase",
     "locale": "en",
     "visual_preset": "signal-flow"
